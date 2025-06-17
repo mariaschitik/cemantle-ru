@@ -2,43 +2,55 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Cemantle-ru</title>
+  <title>Семантическая игра</title>
 </head>
 <body>
-  <h1>Игра Cemantle на русском</h1>
-  <input id="wordInput" placeholder="Введите слово" />
+  <h1>Угадай слово</h1>
+  <input type="text" id="userInput" placeholder="Введите слово" />
   <button onclick="check()">Проверить</button>
   <p id="result"></p>
 
   <script>
-    let vectors = {};
+    let vectors;
+    const secretWord = "солнце";
 
-    // Загрузка JSON-файла с векторами
-    fetch("fasttext_subset_10k.json")
-      .then(r => r.json())
+    fetch('fasttext_subset_10k.json')
+      .then(response => response.json())
       .then(data => {
         vectors = data;
-        console.log("Модель загружена:", Object.keys(vectors).length, "слов");
       });
 
     function cosineSimilarity(vec1, vec2) {
-      const dot = vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
-      const norm1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
-      const norm2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
-      return dot / (norm1 * norm2);
+      let dot = 0, normA = 0, normB = 0;
+      for (let i = 0; i < vec1.length; i++) {
+        dot += vec1[i] * vec2[i];
+        normA += vec1[i] ** 2;
+        normB += vec2[i] ** 2;
+      }
+      return dot / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-    const secret = "снег"; // загаданное слово
-
     function check() {
-      const word = document.getElementById("wordInput").value.trim().toLowerCase();
-      if (!(word in vectors)) {
-        document.getElementById("result").textContent = "Слова нет в словаре.";
+      const input = document.getElementById("userInput").value.trim().toLowerCase();
+      const result = document.getElementById("result");
+
+      if (!vectors) {
+        result.textContent = "Векторы ещё загружаются...";
         return;
       }
 
-      const sim = cosineSimilarity(vectors[word], vectors[secret]);
-      document.getElementById("result").textContent = `Сходство: ${sim.toFixed(4)}`;
+      if (!(input in vectors)) {
+        result.textContent = "Слово не найдено в словаре.";
+        return;
+      }
+
+      if (!(secretWord in vectors)) {
+        result.textContent = "Загаданное слово отсутствует в словаре.";
+        return;
+      }
+
+      const similarity = cosineSimilarity(vectors[input], vectors[secretWord]);
+      result.textContent = `Сходство с загаданным словом: ${similarity.toFixed(4)}`;
     }
   </script>
 </body>
