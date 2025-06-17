@@ -1,57 +1,88 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Семантическая игра</title>
+<meta charset="UTF-8" />
+<title>Игра на fasttext</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  #history { 
+    margin-top: 20px; 
+    border: 1px solid #ccc; 
+    padding: 10px; 
+    height: 200px; 
+    overflow-y: auto; 
+    white-space: pre-wrap;
+    background: #f9f9f9;
+  }
+</style>
 </head>
 <body>
-  <h1>Угадай слово</h1>
-  <input type="text" id="userInput" placeholder="Введите слово" />
-  <button onclick="check()">Проверить</button>
-  <p id="result"></p>
 
-  <script>
-    let vectors;
-    const secretWord = "солнце";
+<h2>Угадай слово</h2>
 
-    fetch('fasttext_subset_10k.json')
-      .then(response => response.json())
-      .then(data => {
-        vectors = data;
-      });
+<input type="text" id="inputWord" placeholder="Введите слово" />
+<button id="checkBtn">Проверить</button>
 
-    function cosineSimilarity(vec1, vec2) {
-      let dot = 0, normA = 0, normB = 0;
-      for (let i = 0; i < vec1.length; i++) {
-        dot += vec1[i] * vec2[i];
-        normA += vec1[i] ** 2;
-        normB += vec2[i] ** 2;
-      }
-      return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-    }
+<p id="result"></p>
 
-    function check() {
-      const input = document.getElementById("userInput").value.trim().toLowerCase();
-      const result = document.getElementById("result");
+<div id="history"></div>
 
-      if (!vectors) {
-        result.textContent = "Векторы ещё загружаются...";
-        return;
-      }
+<script>
+// Пример словаря с векторами (в реале загружай из json)
+const vectors = {
+  "стол": [0.1, 0.2, 0.3],
+  "игра": [0.4, 0.2, 0.1],
+  "компьютер": [0.5, 0.5, 0.5]
+};
 
-      if (!(input in vectors)) {
-        result.textContent = "Слово не найдено в словаре.";
-        return;
-      }
+// Загаданное слово и его вектор (пример)
+const secretWord = "стол";
+const secretVector = vectors[secretWord];
 
-      if (!(secretWord in vectors)) {
-        result.textContent = "Загаданное слово отсутствует в словаре.";
-        return;
-      }
+function cosineSimilarity(vecA, vecB) {
+  let dot = 0, normA = 0, normB = 0;
+  for(let i=0; i < vecA.length; i++){
+    dot += vecA[i]*vecB[i];
+    normA += vecA[i]*vecA[i];
+    normB += vecB[i]*vecB[i];
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 
-      const similarity = cosineSimilarity(vectors[input], vectors[secretWord]);
-      result.textContent = `Сходство с загаданным словом: ${similarity.toFixed(4)}`;
-    }
-  </script>
+function addHistory(word, similarity) {
+  const history = document.getElementById("history");
+  history.textContent += `${word} .......... ${similarity.toFixed(2)}\n`;
+  history.scrollTop = history.scrollHeight; // прокрутка вниз
+}
+
+function checkWord() {
+  const input = document.getElementById("inputWord");
+  const word = input.value.trim().toLowerCase();
+
+  const result = document.getElementById("result");
+
+  if(!vectors[word]){
+    result.textContent = "Слова нет в словаре";
+    return;
+  }
+
+  const sim = cosineSimilarity(secretVector, vectors[word]);
+  result.textContent = `Косинусное сходство: ${sim.toFixed(2)}`;
+
+  addHistory(word, sim);
+  input.value = "";
+}
+
+// Кнопка "Проверить"
+document.getElementById("checkBtn").addEventListener("click", checkWord);
+
+// Отправка по Enter
+document.getElementById("inputWord").addEventListener("keydown", function(e){
+  if(e.key === "Enter") {
+    checkWord();
+  }
+});
+</script>
+
 </body>
 </html>
