@@ -1,88 +1,86 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<title>Игра на fasttext</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  #history { 
-    margin-top: 20px; 
-    border: 1px solid #ccc; 
-    padding: 10px; 
-    height: 200px; 
-    overflow-y: auto; 
-    white-space: pre-wrap;
-    background: #f9f9f9;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Семантическая игра</title>
+  <style>
+    #attempts {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-family: monospace;
+      white-space: pre;
+      background: #f9f9f9;
+    }
+  </style>
 </head>
 <body>
+  <h1>Угадай слово</h1>
+  <input type="text" id="userInput" placeholder="Введите слово" />
+  <button onclick="check()">Проверить</button>
+  <p id="result"></p>
 
-<h2>Угадай слово</h2>
+  <div id="attempts"></div>
 
-<input type="text" id="inputWord" placeholder="Введите слово" />
-<button id="checkBtn">Проверить</button>
+  <script>
+    let vectors;
+    let secretWord;
 
-<p id="result"></p>
+    fetch('fasttext_subset_10k.json')
+      .then(response => response.json())
+      .then(data => {
+        vectors = data;
+        const words = Object.keys(vectors);
+        secretWord = words[Math.floor(Math.random() * words.length)];
+        console.log("Загаданное слово:", secretWord);
+      });
 
-<div id="history"></div>
+    function cosineSimilarity(vec1, vec2) {
+      let dot = 0, normA = 0, normB = 0;
+      for (let i = 0; i < vec1.length; i++) {
+        dot += vec1[i] * vec2[i];
+        normA += vec1[i] ** 2;
+        normB += vec2[i] ** 2;
+      }
+      return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
 
-<script>
-// Пример словаря с векторами (в реале загружай из json)
-const vectors = {
-  "стол": [0.1, 0.2, 0.3],
-  "игра": [0.4, 0.2, 0.1],
-  "компьютер": [0.5, 0.5, 0.5]
-};
+    function check() {
+      const inputElem = document.getElementById("userInput");
+      const input = inputElem.value.trim().toLowerCase();
+      const result = document.getElementById("result");
+      const attempts = document.getElementById("attempts");
 
-// Загаданное слово и его вектор (пример)
-const secretWord = "стол";
-const secretVector = vectors[secretWord];
+      if (!vectors) {
+        result.textContent = "Векторы ещё загружаются...";
+        return;
+      }
 
-function cosineSimilarity(vecA, vecB) {
-  let dot = 0, normA = 0, normB = 0;
-  for(let i=0; i < vecA.length; i++){
-    dot += vecA[i]*vecB[i];
-    normA += vecA[i]*vecA[i];
-    normB += vecB[i]*vecB[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
+      if (!(input in vectors)) {
+        result.textContent = "Слово не найдено в словаре.";
+        return;
+      }
 
-function addHistory(word, similarity) {
-  const history = document.getElementById("history");
-  history.textContent += `${word} .......... ${similarity.toFixed(2)}\n`;
-  history.scrollTop = history.scrollHeight; // прокрутка вниз
-}
+      const similarity = cosineSimilarity(vectors[input], vectors[secretWord]);
+      const roundedSim = similarity.toFixed(2);
 
-function checkWord() {
-  const input = document.getElementById("inputWord");
-  const word = input.value.trim().toLowerCase();
+      result.textContent = `Сходство с загаданным словом: ${roundedSim}`;
 
-  const result = document.getElementById("result");
+      // Добавляем попытку в список
+      attempts.textContent += `${input.padEnd(20, '.')} ${roundedSim}\n`;
 
-  if(!vectors[word]){
-    result.textContent = "Слова нет в словаре";
-    return;
-  }
+      inputElem.value = "";
+      inputElem.focus();
+    }
 
-  const sim = cosineSimilarity(secretVector, vectors[word]);
-  result.textContent = `Косинусное сходство: ${sim.toFixed(2)}`;
-
-  addHistory(word, sim);
-  input.value = "";
-}
-
-// Кнопка "Проверить"
-document.getElementById("checkBtn").addEventListener("click", checkWord);
-
-// Отправка по Enter
-document.getElementById("inputWord").addEventListener("keydown", function(e){
-  if(e.key === "Enter") {
-    checkWord();
-  }
-});
-</script>
-
+    // Добавляем возможность отправлять слово нажатием Enter
+    document.getElementById("userInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        check();
+      }
+    });
+  </script>
 </body>
 </html>
