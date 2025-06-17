@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Cemantle-ru</title>
+</head>
+<body>
+  <h1>Игра Cemantle на русском</h1>
+  <input id="wordInput" placeholder="Введите слово" />
+  <button onclick="check()">Проверить</button>
+  <p id="result"></p>
+
+  <script>
+    let vectors = {};
+
+    // Загрузка JSON-файла с векторами
+    fetch("fasttext_subset_10k.json")
+      .then(r => r.json())
+      .then(data => {
+        vectors = data;
+        console.log("Модель загружена:", Object.keys(vectors).length, "слов");
+      });
+
+    function cosineSimilarity(vec1, vec2) {
+      const dot = vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
+      const norm1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
+      const norm2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
+      return dot / (norm1 * norm2);
+    }
+
+    const secret = "снег"; // загаданное слово
+
+    function check() {
+      const word = document.getElementById("wordInput").value.trim().toLowerCase();
+      if (!(word in vectors)) {
+        document.getElementById("result").textContent = "Слова нет в словаре.";
+        return;
+      }
+
+      const sim = cosineSimilarity(vectors[word], vectors[secret]);
+      document.getElementById("result").textContent = `Сходство: ${sim.toFixed(4)}`;
+    }
+  </script>
+</body>
+</html>
